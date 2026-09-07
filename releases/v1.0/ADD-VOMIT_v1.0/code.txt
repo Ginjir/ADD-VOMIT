@@ -1,0 +1,113 @@
+☠️ ADD-VOMIT 動作説明 ☠️
+
+ADD-VOMITは、VBS → BAT → PowerShell → C→ Windows APIの順に処理を実行し、マウス・キーボード操作を自動化します。
+
+■ 全体の流れ
+
+ショートカット
+↓
+add-vomit_launcher.vbs
+↓
+add-vomit_v1.0.bat
+↓
+PowerShell
+↓
+C/ Windows API
+↓
+マウス・キーボード操作
+
+■ VBS：非表示ランチャー
+
+ファイル：add-vomit_launcher.vbs
+
+Set shell = CreateObject("WScript.Shell")
+
+batPath = Replace(WScript.ScriptFullName, WScript.ScriptName, "add-vomit_v1.0.bat")
+
+shell.Run """" & batPath & """", 0, True
+
+WScript.Shell（Windowsのプログラムを起動できる仕組み）を作成。
+
+batPath に、VBSと同じフォルダにあるBATのパスを作成。
+
+Run の 0 でBATのCMD（コマンド画面）を非表示にし、True でBAT終了まで待機します。
+
+■ BAT：PowerShell起動
+
+ファイル：add-vomit_v1.0.bat
+
+@echo off
+chcp 65001 >nul
+%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -Command ^
+
+@echo off：コマンド表示を抑制。
+
+chcp 65001：UTF-8の文字コードを使用。
+
+> nul：出力を捨てる。
+
+%SystemRoot%：Windowsフォルダを示す環境変数。
+
+-NoProfile：PowerShellのユーザー設定を読み込まない。
+
+-ExecutionPolicy Bypass：この起動時のスクリプト実行制限を回避。
+
+-Command：続く文字列をPowerShellとして実行。
+
+^：BATの行を継続。
+
+■ PowerShell：マウス操作
+
+Add-Type -AssemblyName System.Windows.Forms;
+[System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point(960, 540);
+
+Windows Forms（.NETのGUI機能）を読み込み、マウスを (960,540) へ移動。
+
+座標は左上が (0,0)、Xが右、Yが下です。
+
+$win32 = Add-Type -TypeDefinition 'using System; using System.Runtime.InteropServices; public class Win32 { [DllImport("user32.dll")] public static extern void mouse_event(int dwFlags, int dx, int dy, int cButtons, int dwExtraInfo);}' -PassThru;
+
+C（プログラミング言語）のコードをPowerShell内で作成。
+
+user32.dll（WindowsのGUI機能を提供するシステムDLL）から mouse_event を使用します。
+
+Start-Sleep -m 20;
+$win32::mouse_event(0x0002, 0, 0, 0, 0);
+Start-Sleep -m 20;
+$win32::mouse_event(0x0004, 0, 0, 0, 0);
+
+20ms待機 → 0x0002（左ボタンを押す）→ 20ms待機 → 0x0004（左ボタンを離す）。
+
+つまり1回の左クリックです。
+
+■ PowerShell：キーボード操作
+
+$wshell = New-Object -ComObject Wscript.Shell;
+
+WScript.Shell（Windows操作用のCOMオブジェクト）を作成。
+
+for ($i=0; $i -lt 4; $i++) { $wshell.SendKeys('{TAB}'); Start-Sleep -m 50; }
+
+for（繰り返し処理）でTabを4回入力。
+
+各入力の間に50ms待機。
+
+$wshell.SendKeys('{ENTER}');
+
+Enterを1回入力。
+
+■ 最終処理
+
+マウス移動
+↓
+左クリック
+↓
+Tab × 4
+↓
+Enter
+↓
+終了
+
+ADD-VOMITは画面内容を認識せず、指定座標へのマウス移動と固定回数のキー入力だけを機械的に実行するGUI操作自動化ツールです。
+
+初回バージョンの仕様（マウス・キー操作処理）は、ブラウザ上のYouTubeの広告スキップボタン押下をショートカット化する目的を想定して設定されています。
